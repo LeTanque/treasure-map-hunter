@@ -17,9 +17,9 @@ hr = "---------------------------------"
 
 # Class houses follow path functions
 class Follow():
-    def __init__(self, map, start, end, verbosity=0):
+    def __init__(self, map, end, verbosity=0):
         self.map = None
-        self.start = start
+        self.start = 0
         self.end = end
         self.ve = int(verbosity)
         self.q = Q()
@@ -106,6 +106,7 @@ class Follow():
                 print(f" response = {resp}")
                 # print(f" response content = {resp.content}")
                 print(f" chill = {chillout}s")
+                print(f" room id = {temp_content['room_id']}")
                 print(f" title = {temp_content['title']}")
                 print(f" description = {temp_content['description']}")
                 print(f" elevation = {temp_content['elevation']}")
@@ -117,26 +118,27 @@ class Follow():
                 print(f" players in room = {temp_content['players']}")
                 print(f" messages = {temp_content['messages']}")
 
-            current_room = temp_content['room_id']
             items = temp_content['items']
 
-            print(f" >>> moved to {current_room} \n")
-
             if len(items) > 0:
-                self.pick_up_items()
+                self.pick_up_items(items)
+
             time.sleep(int(chillout + 2))
 
-    def pick_up_items(self):
+    def pick_up_items(self, item_array):
         action = "take/"
-        resp = requests.post(f"{url}{action}", headers=headers )
-        json_response = json.loads(resp.content)
-        print('json_response: ', json_response)
-        # chill = json_response['cooldown']
+        treasure = {"name": item_array[0]}
+        pickup = requests.post(f"{url}{action}",
+                            data=treasure,
+                            headers=headers 
+                            )
         if self.ve >= 1:
-            print(f"\n {hr}")
-            # print(f"Response from {url}{action}")
-            # print(f" response = {json_response}")
-        # time.sleep(int(chill))
+                print(f"\n {hr}")
+                print(f"Response from {url}{action}")
+                print(f" response = {resp}")
+                print(f" pickup content ", pickup.content)
+
+        time.sleep(15)
         self.who_am_i()
 
     def who_am_i(self):
