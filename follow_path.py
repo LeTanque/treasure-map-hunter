@@ -48,7 +48,7 @@ class Follow():
         path = self.find_room(actual_start)
         directions = self.get_directions(path)
         if self.ve >= 1:
-            print(f" Directions from {actual_start} (not {self.start}) to {self.end}: \n {directions}")
+            print(f"\nDirections from {actual_start} (not {self.start}) to {self.end}: \n {directions}")
 
         self.start = actual_start
         self.follow_path(directions, actual_start)
@@ -90,7 +90,6 @@ class Follow():
     def follow_path(self, directions, start):
         current_room = start
         for direct in directions:
-            print(f" >>> current_room \n {current_room} \n {self.map[str(current_room)][direct]} \n {direct} ")
             action = "move/"
             next_room = str(self.map[str(current_room)][direct])
             data = {"direction": f"{direct}", "next_room_id": f"{next_room}"}
@@ -104,18 +103,66 @@ class Follow():
             if self.ve >= 1:
                 print(f"\n {hr}")
                 print(f"Response from {url}{action}")
+                print(f" response = {resp}")
+                # print(f" response content = {resp.content}")
                 print(f" chill = {chillout}s")
-                print(f" response content = {resp.content}")
+                print(f" title = {temp_content['title']}")
+                print(f" description = {temp_content['description']}")
+                print(f" elevation = {temp_content['elevation']}")
+                print(f" terrain = {temp_content['terrain']}")
+                print(f" coordinates = {temp_content['coordinates']}")
                 print(f" current room = {temp_content['room_id']}")
                 print(f" items in room = {temp_content['items']}")
                 print(f" exits = {temp_content['exits']}")
                 print(f" players in room = {temp_content['players']}")
+                print(f" messages = {temp_content['messages']}")
 
             current_room = temp_content['room_id']
-            # items = temp_content['items']
+            items = temp_content['items']
 
-            print(f"moved to {current_room}")
+            print(f" >>> moved to {current_room} \n")
+
+            if len(items) > 0:
+                self.pick_up_items()
             time.sleep(int(chillout + 2))
+
+    def pick_up_items(self):
+        action = "take/"
+        resp = requests.post(f"{url}{action}", headers=headers )
+        json_response = json.loads(resp.content)
+        print('json_response: ', json_response)
+        # chill = json_response['cooldown']
+        if self.ve >= 1:
+            print(f"\n {hr}")
+            # print(f"Response from {url}{action}")
+            # print(f" response = {json_response}")
+        # time.sleep(int(chill))
+        self.who_am_i()
+
+    def who_am_i(self):
+        action = "status/"
+        resp = requests.post(f"{url}{action}", headers=headers )
+        json_response = json.loads(resp.content)
+        chill = json_response['cooldown']
+        if self.ve >= 1:
+            print(f"\n {hr}")
+            print(f"Response from {url}{action}")
+            print(f" response = {resp}")
+            print(f" chill = {chill}s")
+            print(f" name = {json_response['name']}")
+            print(f" encumbrance = {json_response['encumbrance']}")
+            print(f" strength = {json_response['strength']}")
+            print(f" speed = {json_response['speed']}")
+            print(f" gold = {json_response['gold']}")
+            print(f" bodywear = {json_response['bodywear']}")
+            print(f" footwear = {json_response['footwear']}")
+            print(f" inventory = {json_response['inventory']}")
+            print(f" abilities = {json_response['abilities']}")
+            print(f" status = {json_response['status']}")
+            print(f" has_mined = {json_response['has_mined']}")
+            print(f" errors = {json_response['errors']}")
+            print(f" messages = {json_response['messages']} \n {hr}")
+        time.sleep(int(chill))
     
     def where_am_i(self):
         action = "init/"
@@ -129,6 +176,7 @@ class Follow():
             print(f"\n room_id = {json_response['room_id']}\n")
         resp.close()
         time.sleep(int(chill))
+        self.who_am_i()
         return str(json_response['room_id'])
 
             
