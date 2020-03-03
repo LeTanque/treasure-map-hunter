@@ -5,6 +5,9 @@ For your second CS Build Week, you and a small team will be competing against yo
 > How does this employ web?
 
 
+# How to launch
+> `./launcher.py {json map file} {start} {end} {verbosity level}`
+
 ## Minimum Viable Product
 Mine one Lambda Coin. That's it.
 
