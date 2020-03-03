@@ -7,11 +7,12 @@ import os
 
 # sets variables for making post requests to the server
 token = os.environ["SERVER_KEY"]
-url = 'https://lambda-treasure-hunt.herokuapp.com/api/adv'
+url = 'https://lambda-treasure-hunt.herokuapp.com/api/adv/'
 headers = {
     'Authorization': f'Token {token}', 
     'Content-Type': 'application/json'
 }
+hr = "---------------------------------"
 
 
 # Class houses follow path functions
@@ -35,18 +36,26 @@ class Follow():
 
     # This pulls everything together
     # Finds path to room
-    # Finds directions to room
+    # Finds directions to room room id 55 -> 475
     def run(self):
-        path = self.find_room()
+        actual_start = None
+        try:
+            actual_start = self.where_am_i()
+        except:
+            print("ERROR: You must find yourself.")
+            return
+
+        path = self.find_room(actual_start)
         directions = self.get_directions(path)
         if self.ve >= 1:
-            print(f"Directions from {self.start} to {self.end}: \n {directions}")
+            print(f" Directions from {actual_start} (not {self.start}) to {self.end}: \n {directions}")
 
-        self.follow_path(directions)
+        self.start = actual_start
+        self.follow_path(directions, actual_start)
 
     # gets the path and directions to follow that path
-    def find_room(self):
-        self.q.put([self.start])
+    def find_room(self, starter):
+        self.q.put([starter])
         visited = set()
         while self.q.qsize() > 0:
             path = self.q.get()
@@ -78,19 +87,48 @@ class Follow():
         return(directions)
 
     # follows the path with the directions
-    def follow_path(self, directions):
-        current_room = self.start
-        for dir in directions:
-            next_room = str(self.map[current_room][dir])
-            data = {'direction': f'{dir}', 'next_room_id': f'{next_room}'}
-            resp = requests.post(url + '/move/',
+    def follow_path(self, directions, start):
+        current_room = start
+        for direct in directions:
+            print(f" >>> current_room \n {current_room} \n {self.map[str(current_room)][direct]} \n {direct} ")
+            action = "move/"
+            next_room = str(self.map[str(current_room)][direct])
+            data = {"direction": f"{direct}", "next_room_id": f"{next_room}"}
+            resp = requests.post(f"{url}{action}",
                                 data=json.dumps(data),
                                 headers=headers
                                 )
             temp_content = json.loads(resp.content)
-            CD = temp_content['cooldown']
-            current_room = str(temp_content['room_id'])
-            items = temp_content['items']
-            print(f'moved to {current_room}')
-            print(f'items {items}')
-            time.sleep(CD + .1)
+            chillout = temp_content['cooldown']
+
+            if self.ve >= 1:
+                print(f"\n {hr}")
+                print(f"Response from {url}{action}")
+                print(f" chill = {chillout}s")
+                print(f" response content = {resp.content}")
+                print(f" current room = {temp_content['room_id']}")
+                print(f" items in room = {temp_content['items']}")
+                print(f" exits = {temp_content['exits']}")
+                print(f" players in room = {temp_content['players']}")
+
+            current_room = temp_content['room_id']
+            # items = temp_content['items']
+
+            print(f"moved to {current_room}")
+            time.sleep(int(chillout + 2))
+    
+    def where_am_i(self):
+        action = "init/"
+        resp = requests.get(f"{url}{action}", headers=headers )
+        json_response = json.loads(resp.content)
+        chill = json_response['cooldown']
+        if self.ve >= 2:
+            print(f"\n {json_response} \n")
+        if self.ve >= 1:
+            print(f"\n{hr}\nResponse from {url}{action} \n {resp}")
+            print(f"\n room_id = {json_response['room_id']}\n")
+        resp.close()
+        time.sleep(int(chill))
+        return str(json_response['room_id'])
+
+            
