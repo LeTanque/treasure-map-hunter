@@ -2,18 +2,20 @@
 
 For your second CS Build Week, you and a small team will be competing against your fellow CS students in the ***Lambda Treasure Hunt***. To succeed, you will need to apply knowledge you've learned throughout your entire tenure at Lambda School -- CS, Labs and main track -- to efficiently traverse an island maze, collect treasure, solve puzzles, unearth powerful artifacts and more. Glory and riches await the victors!
 
-## Minimum Viable Product
+> How does this employ web?
 
+
+## Minimum Viable Product
 Mine one Lambda Coin. That's it.
 
 
 ## Overview
-
 You start the adventure unworthy, unequipped and anonymous. Your first task is to traverse the island and build a map for your personal use. Along the way, you will discover equipment, treasure and clues which will assist you on your quest for power, wealth and glory.
 
-## Rooms
 
-The map is laid out in a grid: Similar to your worlds from Week 1 of your CS training, each room may have exits in the cardinal directions: north, south, east and west. Each room also comes with a unique ID and coordinates for your convenience.
+## Rooms
+The map is laid out in a grid: Similar to your worlds from Week 1 of your CS training, each room may have exits in the cardinal directions: north, south, east and west. 
+Each room also comes with a unique ID and coordinates for your convenience.
 
 ```
 // Starting room
@@ -33,11 +35,10 @@ The map is laid out in a grid: Similar to your worlds from Week 1 of your CS tra
 
 
 ## Cooldown
-
 Your access to the server is restricted until you earn more power. Starting off, you are only allowed to make one request every 15 seconds. Sending another request before that time has elapsed will incur a penalty. The cooldown may decrease as the days wear on - make sure to keep an eye on your cohort's channel for important updates.
 
-## Initialization
 
+## Initialization
 Test your API key with the init command. You can use this to get all relevant stats before you start moving.
 
 `
