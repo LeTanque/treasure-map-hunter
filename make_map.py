@@ -84,9 +84,10 @@ current_room = 0
 
 
 # a while loop for creating the map 500
-while len(map) < 500:
+while len(map) < 6:
     # waits for cooldown before starting next loop
     cooldown = map[current_room]['info']['cooldown']
+    print(f"   cooldown CD {cooldown}")
     time.sleep(cooldown + .1)
 
     # starts looking for a '?'
@@ -121,14 +122,14 @@ while len(map) < 500:
         # moves the player to the room with a new path
         for dir in dirs:
             data = {'direction': f'{dir}'}
-            resp = requests.post(url + '/move/',
+            resp = requests.post(url + 'move/',
                                  data=json.dumps(data),
                                  headers=headers
                                  )
             temp_content = json.loads(resp.content)
             chillout = temp_content['cooldown']
             current_room = temp_content['room_id']
-            print(f"moved to {current_room}")
+            print(f"moved to {current_room}, searching 2")
             print(f"   chillout CD {chillout}")
             time.sleep(chillout + .3)
 
@@ -139,14 +140,14 @@ while len(map) < 500:
 
         # travels the player and updates the current room
         data = {'direction': f'{next_direction}'}
-        response = requests.post(url + '/move/',
+        response = requests.post(url + 'move/',
                                  data=json.dumps(data),
                                  headers=headers
                                  )
 
         output = json.loads(response.content)
         current_room = output['room_id']
-        print(f'moved to {current_room}')
+        print(f'moved to {current_room} in else')
 
         # adds next rooms exits to the graph
         if current_room not in map:
@@ -158,11 +159,11 @@ while len(map) < 500:
         map[current_room][inv_dir(next_direction)] = last_room
 
         # writes map dict to file for use later
-        with open('map.json', 'w') as map_file:
+        with open('map05a.json', 'w') as map_file:
             json.dump(map, map_file)
 
 # writes map dict to file for use later
-with open('map04.json', 'w') as map_file:
+with open('map04b.json', 'w') as map_file:
     json.dump(map, map_file)
 
 for room in map:
