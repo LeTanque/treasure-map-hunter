@@ -7,11 +7,9 @@ import os
 
 # sets variables for making post requests to the server
 token = os.environ["SERVER_KEY"]
-url = 'https://lambda-treasure-hunt.herokuapp.com/api/adv'
-headers = {
-    'Authorization': f'Token {token}', 
-    'Content-Type': 'application/json'
-}
+url = 'https://lambda-treasure-hunt.herokuapp.com/api/adv/'
+headers = {"Authorization": f"Token {token}", "Content-Type": "application/json"}
+hr = "---------------------------------"
 
 
 # defines a function to add blank rooms from a current location
@@ -86,7 +84,7 @@ current_room = 0
 
 
 # a while loop for creating the map 500
-while len(map) < 0:
+while len(map) < 500:
     # waits for cooldown before starting next loop
     cooldown = map[current_room]['info']['cooldown']
     time.sleep(cooldown + .1)
@@ -128,10 +126,11 @@ while len(map) < 0:
                                  headers=headers
                                  )
             temp_content = json.loads(resp.content)
-            CD = temp_content['cooldown']
+            chillout = temp_content['cooldown']
             current_room = temp_content['room_id']
-            print(f'moved to {current_room}')
-            time.sleep(CD + .1)
+            print(f"moved to {current_room}")
+            print(f"   chillout CD {chillout}")
+            time.sleep(chillout + .3)
 
     else:
 
@@ -162,9 +161,9 @@ while len(map) < 0:
         with open('map.json', 'w') as map_file:
             json.dump(map, map_file)
 
-# # writes map dict to file for use later
-# with open('map03.json', 'w') as map_file:
-#     json.dump(map, map_file)
+# writes map dict to file for use later
+with open('map04.json', 'w') as map_file:
+    json.dump(map, map_file)
 
-# for room in map:
-#     print(room)
+for room in map:
+    print(room)

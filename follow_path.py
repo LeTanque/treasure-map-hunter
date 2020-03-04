@@ -8,10 +8,7 @@ import os
 # sets variables for making post requests to the server
 token = os.environ["SERVER_KEY"]
 url = 'https://lambda-treasure-hunt.herokuapp.com/api/adv/'
-headers = {
-    'Authorization': f'Token {token}', 
-    'Content-Type': 'application/json'
-}
+headers = {'Authorization': f'Token {token}', 'Content-Type': 'application/json'}
 hr = "---------------------------------"
 
 
@@ -29,6 +26,7 @@ class Follow():
     def load_map(self, mapfile):
         with open(mapfile) as json_file:
             self.map = json.load(json_file)
+            print('json_file: ', len(self.map))
             if self.ve >= 2:
                 print('Loaded map: \n', self.map)
 
@@ -84,15 +82,15 @@ class Follow():
             for dir in dirs:
                 if str(self.map[path[i]][dir]) == str((path[i+1])):
                     directions.append(dir)
-        return(directions)
+        return directions
 
     # follows the path with the directions
     def follow_path(self, directions, start):
         current_room = start
         for direct in directions:
             action = "move/"
-            next_room = str(self.map[str(current_room)][direct])
-            data = {"direction": f"{direct}", "next_room_id": f"{next_room}"}
+            next_room = self.map[current_room][str(direct)]
+            data = {'direction': f'{direct}', 'next_room_id': f'{str(next_room)}'}
             resp = requests.post(f"{url}{action}",
                                 data=json.dumps(data),
                                 headers=headers
@@ -104,7 +102,6 @@ class Follow():
                 print(f"\n {hr}")
                 print(f"Response from {url}{action}")
                 print(f" response = {resp}")
-                # print(f" response content = {resp.content}")
                 print(f" chill = {chillout}s")
                 print(f" room id = {temp_content['room_id']}")
                 print(f" title = {temp_content['title']}")
@@ -112,7 +109,6 @@ class Follow():
                 print(f" elevation = {temp_content['elevation']}")
                 print(f" terrain = {temp_content['terrain']}")
                 print(f" coordinates = {temp_content['coordinates']}")
-                print(f" current room = {temp_content['room_id']}")
                 print(f" items in room = {temp_content['items']}")
                 print(f" exits = {temp_content['exits']}")
                 print(f" players in room = {temp_content['players']}")
@@ -120,25 +116,31 @@ class Follow():
 
             items = temp_content['items']
 
+            time.sleep(int(chillout + 2))
+
             if len(items) > 0:
                 self.pick_up_items(items)
 
-            time.sleep(int(chillout + 2))
 
     def pick_up_items(self, item_array):
         action = "take/"
-        treasure = {"name": item_array[0]}
+        item = item_array[0]
+        treasure = {'name': f'{item}'}
         pickup = requests.post(f"{url}{action}",
-                            data=treasure,
+                            data=json.dumps(treasure),
                             headers=headers 
                             )
+        json_response = json.loads(pickup.content)
+        print('json_response: ', json_response)
+        chill = json_response['cooldown']
         if self.ve >= 1:
                 print(f"\n {hr}")
                 print(f"Response from {url}{action}")
-                print(f" response = {resp}")
+                # print(f" response = {resp}")
                 print(f" pickup content ", pickup.content)
 
-        time.sleep(15)
+        time.sleep(int(chill))
+        time.sleep(.3)
         self.who_am_i()
 
     def who_am_i(self):
@@ -165,6 +167,8 @@ class Follow():
             print(f" errors = {json_response['errors']}")
             print(f" messages = {json_response['messages']} \n {hr}")
         time.sleep(int(chill))
+        time.sleep(.3)
+        return json_response
     
     def where_am_i(self):
         action = "init/"
@@ -175,7 +179,8 @@ class Follow():
             print(f"\n {json_response} \n")
         if self.ve >= 1:
             print(f"\n{hr}\nResponse from {url}{action} \n {resp}")
-            print(f"\n room_id = {json_response['room_id']}\n")
+            print(f"\n room_id = {json_response['room_id']}")
+            print(f" exits = {json_response['exits']}\n")
         resp.close()
         time.sleep(int(chill))
         self.who_am_i()
