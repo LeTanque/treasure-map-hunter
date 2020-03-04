@@ -12,6 +12,12 @@ headers = {'Authorization': f'Token {token}', 'Content-Type': 'application/json'
 hr = "---------------------------------"
 
 
+# List to string 
+def list_string(s):
+    string = ","
+    return string.join(s)
+
+
 # Class houses follow path functions
 class Follow():
     def __init__(self, map, end=0, command=None):
@@ -20,7 +26,7 @@ class Follow():
         self.end = end
         self.ve = 1
         self.cmd = command
-        self.pick_up_things = False
+        self.auto_pickup = False
         # self.ve = int(verbosity)
         # self.direction = direction
         self.q = Q()
@@ -40,10 +46,13 @@ class Follow():
     # Finds path to room
     # Finds directions to room room id 55 -> 475
     def run(self):
+        where_in_the_world = None
+        status = None
         actual_start = self.start
-        status = self.who_am_i()
         try:
-            actual_start = self.where_am_i()
+            status = self.who_am_i()
+            where_in_the_world = self.where_am_i()
+            actual_start = str(where_in_the_world["room_id"])
         except:
             print("ERROR: You must find yourself.")
             return
@@ -51,6 +60,9 @@ class Follow():
         # This logic processes commands given on CLI
         if self.cmd == "find":
             self.find_path(actual_start)
+
+        elif self.cmd == "dash":
+            self.find_path(actual_start, True)
 
         elif self.cmd == "sell":
             self.sell_treasure(status)
@@ -64,17 +76,22 @@ class Follow():
         elif self.cmd == "changename":
             self.change_name()
 
+        elif self.cmd == "pickup":
+            self.pick_up_items(where_in_the_world["items"])
+
         else:
             print(f"Valid commands are find, sell, status, pray, changename")
 
     # gets the path and directions to follow that path
-    def find_path(self, start):
+    def find_path(self, start, dash=False):
         path = self.find_room(start)
         directions = self.get_directions(path)
-        if self.ve >= 1:
-            print(f"\n {hr}")
-            print(f"Directions from {start} to {self.end}: \n {directions}")
-        self.follow_path(directions, start)
+        
+        if dash is True:
+            print(f"DASH!!!")
+            self.dash_prepare(directions, path, start)
+        else:
+            self.follow_path(directions, start)
 
     def find_room(self, starter):
         self.q.put([starter])
@@ -111,40 +128,81 @@ class Follow():
     # Executes the moves to follow the path
     def follow_path(self, directions, start):
         current_room = start
+
+        if self.ve >= 1:
+            print(f"\n {hr}")
+            print(f"Directions from {start} to {self.end}: \n {directions}")
+
         for direct in directions:
             action = "move/"
             next_room = self.map[current_room][str(direct)]
-
-            print(f'   next_room in follow path: {next_room} \n   direct: {direct} ')
-
             data = {'direction': f'{direct}', 'next_room_id': f'{str(next_room)}'}
             resp = requests.post(f"{url}{action}", data=json.dumps(data), headers=headers )
-            temp_content = json.loads(resp.content)
-            chillout = temp_content['cooldown']
+            json_response = json.loads(resp.content)
+            chillout = json_response['cooldown']
 
             if self.ve >= 1:
-                print(f"\n {hr}")
-                print(f"Response from {url}{action}")
-                print(f" response = {resp}")
-                print(f" chill = {chillout}s")
-                print(f" room id = {temp_content['room_id']}")
-                print(f" title = {temp_content['title']}")
-                print(f" description = {temp_content['description']}")
-                print(f" elevation = {temp_content['elevation']}")
-                print(f" terrain = {temp_content['terrain']}")
-                print(f" coordinates = {temp_content['coordinates']}")
-                print(f" items in room = {temp_content['items']}")
-                print(f" exits = {temp_content['exits']}")
-                print(f" players in room = {temp_content['players']}")
-                print(f" messages = {temp_content['messages']}")
+                print(f'   next_room in follow path: {next_room} \n   direct: {direct} \n   directions: {directions} ')
+                self.movement_message(action, resp, json_response)
 
             time.sleep(int(chillout + 2))
 
-            if self.pick_up_things is True:
-                items = temp_content['items']
+            if self.auto_pickup is True:
+                items = json_response['items']
                 if len(items) > 0:
                     self.pick_up_items(items)
             current_room = str(next_room)
+
+    def dash_prepare(self, directions, path, start):
+        if self.ve >= 1:
+            print(f"\n {hr}")
+            print(f"Directions from {start} to {self.end}: \n {directions} \n {path} \n  {path[1:]}")
+        
+        if len(directions) <= 1:
+            print(f"  WARNING: path too short to dash")
+            self.follow_path(directions, start)
+        corrected_path = path[1:]
+        dash_direction = {}
+        dash_path = []
+
+        while len(corrected_path) != 0:
+            for eachway in directions:
+                print(f"Each way: {eachway}")
+                dash_direction["compass"] = eachway
+                if dash_direction["compass"] == eachway:
+                    dash_path.append(corrected_path.pop(0))
+                if dash_direction["compass"] != eachway:
+                    self.dash(dash_direction["compass"], dash_path)
+                    dash_path = []
+                    dash_path.append(corrected_path.pop(0))
+
+                # dash_path.append(corrected_path.pop(0)) # pops off of empty list?
+                try:
+                    dash_path.append(corrected_path.pop(0)) # pops off of empty list?
+                    self.dash(dash_direction["compass"], dash_path)
+                except:
+                    self.dash(dash_direction["compass"], dash_path)
+
+        print(f"dash path", dash_path)
+
+
+    def dash(self, direct, path_array):
+        action = "dash/"
+        direction = direct
+        num_of_rooms = len(path_array)
+
+        dash_coordinates = {'direction': f'{direction}', 'num_rooms': f'{num_of_rooms}', 'next_room_ids': f'{list_string(path_array)}'}
+        dasher = requests.post(f"{url}{action}", data=json.dumps(dash_coordinates), headers=headers )
+        json_response = json.loads(dasher.content)
+        chill = json_response['cooldown']
+
+        print(f'\n   dash_coordinates: \n   {dash_coordinates} \n   json: \n   {json_response}')
+        if self.ve >= 1:
+            self.movement_message(action, dasher, json_response)
+            print(f" whooooshhhhh!!!")
+
+        time.sleep(int(chill))
+        time.sleep(.3)
 
     def pick_up_items(self, item_array):
         action = "take/"
@@ -153,6 +211,7 @@ class Follow():
         pickup = requests.post(f"{url}{action}", data=json.dumps(treasure), headers=headers )
         json_response = json.loads(pickup.content)
         chill = json_response['cooldown']
+
         if self.ve >= 1:
                 print(f"\n {hr}")
                 print(f"Response from {url}{action}")
@@ -169,10 +228,12 @@ class Follow():
         sell = requests.post(f"{url}{action}", data=json.dumps(treasure), headers=headers )
         json_response = json.loads(sell.content)
         chill = json_response['cooldown']
+
         if self.ve >= 1:
                 print(f"\n {hr}")
                 print(f"Response from {url}{action}")
-                print(f" sell treasure ", sell.content)
+                print(f" sell treasure ", sell.content["messages"])
+
         time.sleep(int(chill))
         time.sleep(.3)
 
@@ -181,10 +242,12 @@ class Follow():
         prayer = requests.post(f"{url}{action}", headers=headers )
         json_response = json.loads(prayer.content)
         chill = json_response['cooldown']
+
         if self.ve >= 1:
                 print(f"\n {hr}")
                 print(f"Response from {url}{action}")
-                print(f" ... praying ... ", prayer.content)
+                print(f" ... praying ... ", json_response["messages"])
+
         time.sleep(int(chill))
         time.sleep(.3)
 
@@ -195,29 +258,34 @@ class Follow():
         name_change = requests.post(f"{url}{action}", data=json.dumps(treasure), headers=headers )
         json_response = json.loads(name_change.content)
         chill = json_response['cooldown']
+
         if self.ve >= 1:
                 print(f"\n {hr}")
                 print(f"Response from {url}{action}")
-                print(f" name changed to {new_name} \n {name_change.content}")
+                print(f" name changed to {new_name}", json_response["messages"])
+
         time.sleep(int(chill))
         time.sleep(.3)
 
-    
+
     def where_am_i(self):
         action = "init/"
         resp = requests.get(f"{url}{action}", headers=headers )
         json_response = json.loads(resp.content)
         chill = json_response['cooldown']
+
         if self.ve >= 2:
             print(f"\n {json_response} \n")
+
         if self.ve >= 1:
             print(f"\n {hr}")
             print(f"Response from {url}{action}")
             print(f"\n room_id = {json_response['room_id']}")
             print(f" exits = {json_response['exits']}\n")
+        
         resp.close()
         time.sleep(int(chill))
-        return str(json_response['room_id'])
+        return json_response
 
     def who_am_i(self):
         action = "status/"
@@ -247,3 +315,20 @@ class Follow():
         time.sleep(int(chill))
         time.sleep(.3)
         return json_response
+    
+    def movement_message(self, action, response, json_response):
+        cooldown = json_response['cooldown']
+        print(f"\n {hr}")
+        print(f"Response from {url}{action}")
+        print(f" response = {response}")
+        print(f" chill = {cooldown}s")
+        print(f" room id = {json_response['room_id']}")
+        print(f" title = {json_response['title']}")
+        print(f" description = {json_response['description']}")
+        print(f" elevation = {json_response['elevation']}")
+        print(f" terrain = {json_response['terrain']}")
+        print(f" coordinates = {json_response['coordinates']}")
+        print(f" items in room = {json_response['items']}")
+        print(f" exits = {json_response['exits']}")
+        print(f" players in room = {json_response['players']}")
+        print(f" messages = {json_response['messages']}")
