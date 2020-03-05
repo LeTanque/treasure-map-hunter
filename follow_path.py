@@ -8,6 +8,7 @@ import os
 # Globals
 token = os.environ["SERVER_KEY"]
 url = 'https://lambda-treasure-hunt.herokuapp.com/api/adv/'
+bc_url = 'https://lambda-treasure-hunt.herokuapp.com/api/bc/'
 headers = {'Authorization': f'Token {token}', 'Content-Type': 'application/json'}
 hr = "---------------------------------"
 
@@ -87,8 +88,11 @@ class Follow():
         elif self.cmd == "examineplayer":
             self.examine(where_in_the_world["players"][0])
 
+        elif self.cmd == "balance":
+            self.balance()
+
         else:
-            print(f"Valid commands are find, dash, fly, sell, status, pray, changename, pickup, examineplace, examineplayer")
+            print(f"Valid commands are find, dash, fly, sell, status, pray, changename, pickup, examineplace, examineplayer, balance")
 
     # gets the path and directions to follow that path
     def find_path(self, start, travel_method):
@@ -171,7 +175,7 @@ _/        _/  _/    _/_/_/  _/    _/      _/_/\n\
             _/\n\
                     ")
 
-            time.sleep(int(chillout + 2))
+            time.sleep(int(chillout + 1))
 
             if self.auto_pickup is True:
                 items = json_response['items']
@@ -324,6 +328,20 @@ _/    _/  _/    _/      _/_/  _/    _/\n\
         time.sleep(int(chill))
         time.sleep(.3)
 
+    def balance(self):
+        action = "get_balance/"
+        response = requests.get(f"{bc_url}{action}", headers=headers )
+        json_response = json.loads(response.content)
+        chill = json_response['cooldown']
+
+        if self.ve >= 1:
+            print(f"\n {hr}")
+            print(f"Response from {url}{action}")
+            print(f" Lambda coin balance:", f" {json_response['messages'][0]}")
+
+        time.sleep(int(chill))
+        time.sleep(.3)
+
 
     def where_am_i(self):
         action = "init/"
@@ -335,10 +353,6 @@ _/    _/  _/    _/      _/_/  _/    _/\n\
             print(f"\n {json_response} \n")
 
         if self.ve >= 1:
-            # print(f"\n {hr}")
-            # print(f"Response from {url}{action}")
-            # print(f"\n room_id = {json_response['room_id']}")
-            # print(f" exits = {json_response['exits']}\n")
             self.movement_message(action, resp, json_response)
         
         resp.close()

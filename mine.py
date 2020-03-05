@@ -2,6 +2,7 @@ import json
 import requests
 import hashlib
 import os
+import time
 
 
 # Globals
@@ -47,4 +48,8 @@ while True:
     data = {'proof': proof}
     print(f"This is being sent to mine {data}")
     response = requests.post(f"{url}mine/", headers=headers, data = json.dumps(data) )
-    print(response.content)
+    json_response = json.loads(response.content)
+    print(f"all response: {json_response} \n", json_response["cooldown"])
+    time.sleep(int(json_response["cooldown"] + 1))
+    if len(json_response["messages"]) > 0:
+        break
