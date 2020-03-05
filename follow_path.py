@@ -5,7 +5,7 @@ from queue import SimpleQueue as Q
 import os
 
 
-# sets variables for making post requests to the server
+# Globals
 token = os.environ["SERVER_KEY"]
 url = 'https://lambda-treasure-hunt.herokuapp.com/api/adv/'
 headers = {'Authorization': f'Token {token}', 'Content-Type': 'application/json'}
@@ -54,15 +54,17 @@ class Follow():
             where_in_the_world = self.where_am_i()
             actual_start = str(where_in_the_world["room_id"])
         except:
-            print("ERROR: You must find yourself.")
-            return
+            print("WAIT: You must find yourself.")
         
         # This logic processes commands given on CLI
         if self.cmd == "find":
-            self.find_path(actual_start)
+            self.find_path(actual_start, "find")
 
         elif self.cmd == "dash":
-            self.find_path(actual_start, True)
+            self.find_path(actual_start, "dash")
+   
+        elif self.cmd == "fly":
+            self.find_path(actual_start, "fly")
 
         elif self.cmd == "sell":
             self.sell_treasure(status)
@@ -79,19 +81,26 @@ class Follow():
         elif self.cmd == "pickup":
             self.pick_up_items(where_in_the_world["items"])
 
+        elif self.cmd == "examineplace":
+            self.examine(where_in_the_world["title"])
+
+        elif self.cmd == "examineplayer":
+            self.examine(where_in_the_world["players"][0])
+
         else:
-            print(f"Valid commands are find, sell, status, pray, changename")
+            print(f"Valid commands are find, dash, fly, sell, status, pray, changename, pickup, examineplace, examineplayer")
 
     # gets the path and directions to follow that path
-    def find_path(self, start, dash=False):
+    def find_path(self, start, travel_method):
         path = self.find_room(start)
         directions = self.get_directions(path)
         
-        if dash is True:
-            print(f"DASH!!!")
-            self.dash_prepare(directions, path, start)
-        else:
+        if travel_method is "find":
             self.follow_path(directions, start)
+        if travel_method is "dash":
+            self.dash_prepare(directions, path, start)
+        if travel_method is "fly":
+            self.follow_path(directions, start, True)
 
     def find_room(self, starter):
         self.q.put([starter])
@@ -126,7 +135,7 @@ class Follow():
         return directions
 
     # Executes the moves to follow the path
-    def follow_path(self, directions, start):
+    def follow_path(self, directions, start, fly=False):
         current_room = start
 
         if self.ve >= 1:
@@ -134,16 +143,33 @@ class Follow():
             print(f"Directions from {start} to {self.end}: \n {directions}")
 
         for direct in directions:
-            action = "move/"
             next_room = self.map[current_room][str(direct)]
-            data = {'direction': f'{direct}', 'next_room_id': f'{str(next_room)}'}
-            resp = requests.post(f"{url}{action}", data=json.dumps(data), headers=headers )
+            if fly is True:
+                action = "fly/"
+                data = {'direction': f'{direct}', 'next_room_id': f'{str(next_room)}'}
+                resp = requests.post(f"{url}{action}", data=json.dumps(data), headers=headers )
+            else:
+                action = "move/"
+                data = {'direction': f'{direct}', 'next_room_id': f'{str(next_room)}'}
+                resp = requests.post(f"{url}{action}", data=json.dumps(data), headers=headers )
+
             json_response = json.loads(resp.content)
             chillout = json_response['cooldown']
 
             if self.ve >= 1:
                 print(f'   next_room in follow path: {next_room} \n   direct: {direct} \n   directions: {directions} ')
                 self.movement_message(action, resp, json_response)
+                if fly is True:
+                    print(f"\n\
+                   _/\n\
+  _/_/_/_/_/  _/  _/    _/_/_/  _/          _/\n\
+         _/  _/  _/  _/        _/_/_/    _/_/_/_/\n\
+      _/    _/  _/  _/  _/_/  _/    _/    _/\n\
+   _/      _/  _/  _/    _/  _/    _/    _/\n\
+_/        _/  _/    _/_/_/  _/    _/      _/_/\n\
+             _/\n\
+            _/\n\
+                    ")
 
             time.sleep(int(chillout + 2))
 
@@ -156,53 +182,67 @@ class Follow():
     def dash_prepare(self, directions, path, start):
         if self.ve >= 1:
             print(f"\n {hr}")
-            print(f"Directions from {start} to {self.end}: \n {directions} \n {path} \n  {path[1:]}")
+            print(f"Directions from {start} to {self.end}: \n {directions} \n  {path[1:]}")
         
         if len(directions) <= 1:
             print(f"  WARNING: path too short to dash")
             self.follow_path(directions, start)
+        
         corrected_path = path[1:]
         dash_direction = {}
         dash_path = []
+        dash_direction["compass"] = directions[0]
 
         while len(corrected_path) != 0:
             for eachway in directions:
                 print(f"Each way: {eachway}")
-                dash_direction["compass"] = eachway
                 if dash_direction["compass"] == eachway:
                     dash_path.append(corrected_path.pop(0))
+                    print(f" this is the way {dash_path}")
                 if dash_direction["compass"] != eachway:
+                    print(f" this is the way if direction != eachway {dash_path}")
+                    # Execute a dash with given direction and paths
                     self.dash(dash_direction["compass"], dash_path)
+                    # set new direction
+                    dash_direction["compass"] = eachway
+                    # clear the path
                     dash_path = []
+                    # Add first move in new direction
                     dash_path.append(corrected_path.pop(0))
-
-                # dash_path.append(corrected_path.pop(0)) # pops off of empty list?
-                try:
-                    dash_path.append(corrected_path.pop(0)) # pops off of empty list?
-                    self.dash(dash_direction["compass"], dash_path)
-                except:
-                    self.dash(dash_direction["compass"], dash_path)
-
-        print(f"dash path", dash_path)
-
 
     def dash(self, direct, path_array):
         action = "dash/"
-        direction = direct
         num_of_rooms = len(path_array)
-
-        dash_coordinates = {'direction': f'{direction}', 'num_rooms': f'{num_of_rooms}', 'next_room_ids': f'{list_string(path_array)}'}
+        dash_coordinates = {'direction': f'{direct}', 'num_rooms': f'{num_of_rooms}', 'next_room_ids': f'{list_string(path_array)}'}
         dasher = requests.post(f"{url}{action}", data=json.dumps(dash_coordinates), headers=headers )
         json_response = json.loads(dasher.content)
         chill = json_response['cooldown']
 
-        print(f'\n   dash_coordinates: \n   {dash_coordinates} \n   json: \n   {json_response}')
+        print(f'\n   dash_coordinates: \n   {dash_coordinates} \n   json: \n   {json_response["messages"]}')
         if self.ve >= 1:
             self.movement_message(action, dasher, json_response)
-            print(f" whooooshhhhh!!!")
+            print(f"\n\
+         _/                      _/\n\
+    _/_/_/    _/_/_/    _/_/_/  _/_/_/\n\
+ _/    _/  _/    _/  _/_/      _/    _/\n\
+_/    _/  _/    _/      _/_/  _/    _/\n\
+ _/_/_/    _/_/_/  _/_/_/    _/    _/\n\
+")
 
         time.sleep(int(chill))
         time.sleep(.3)
+
+    def flight(self, direction):
+        # curl -X POST -H 'Authorization: Token 7a375b52bdc410eebbc878ed3e58b2e94a8cb607' 
+        # -H "Content-Type: application/json" -d '{"direction":"n"}' https://lambda-treasure-hunt.herokuapp.com/api/adv/fly/
+        action = "fly/"
+        flight_data = {'direction': f'{direction}'}
+        fly_me_a_river = requests.post(f"{url}{action}", data=json.dumps(flight_data), headers=headers )
+        json_response = json.loads(fly_me_a_river.content)
+        chill = json_response['cooldown']
+        time.sleep(int(chill))
+        time.sleep(.3)
+
 
     def pick_up_items(self, item_array):
         action = "take/"
@@ -247,6 +287,7 @@ class Follow():
                 print(f"\n {hr}")
                 print(f"Response from {url}{action}")
                 print(f" ... praying ... ", json_response["messages"])
+                print(f" ... praying ... ", json_response)
 
         time.sleep(int(chill))
         time.sleep(.3)
@@ -260,9 +301,25 @@ class Follow():
         chill = json_response['cooldown']
 
         if self.ve >= 1:
-                print(f"\n {hr}")
-                print(f"Response from {url}{action}")
-                print(f" name changed to {new_name}", json_response["messages"])
+            print(f"\n {hr}")
+            print(f"Response from {url}{action}")
+            print(f" name changed to {new_name}", json_response["messages"])
+
+        time.sleep(int(chill))
+        time.sleep(.3)
+
+    def examine(self, query):
+        # '{"name":"[NAME OF ITEM OR PLAYER]"}' 
+        action = "examine/"
+        treasure = {'name': f'{query}'}
+        examiner = requests.post(f"{url}{action}", data=json.dumps(treasure), headers=headers )
+        json_response = json.loads(examiner.content)
+        chill = json_response['cooldown']
+
+        if self.ve >= 1:
+            print(f"\n {hr}")
+            print(f"Response from {url}{action}")
+            print(f" examining {query}", json_response["description"], f"\n  {json_response}")
 
         time.sleep(int(chill))
         time.sleep(.3)
@@ -278,10 +335,11 @@ class Follow():
             print(f"\n {json_response} \n")
 
         if self.ve >= 1:
-            print(f"\n {hr}")
-            print(f"Response from {url}{action}")
-            print(f"\n room_id = {json_response['room_id']}")
-            print(f" exits = {json_response['exits']}\n")
+            # print(f"\n {hr}")
+            # print(f"Response from {url}{action}")
+            # print(f"\n room_id = {json_response['room_id']}")
+            # print(f" exits = {json_response['exits']}\n")
+            self.movement_message(action, resp, json_response)
         
         resp.close()
         time.sleep(int(chill))
