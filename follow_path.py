@@ -99,11 +99,11 @@ class Follow():
         path = self.find_room(start)
         directions = self.get_directions(path)
         
-        if travel_method is "find":
+        if travel_method == "find":
             self.follow_path(directions, start)
-        if travel_method is "dash":
+        if travel_method == "dash":
             self.dash_prepare(directions, path, start)
-        if travel_method is "fly":
+        if travel_method == "fly":
             self.follow_path(directions, start, True)
 
     def find_room(self, starter):
